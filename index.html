@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Squeeze Advent: a digital advent calendar with 24 squishy on-screen toys, one for each day of December.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2752%27 r=%2742%27 fill=%27%23ff4f9a%27 stroke=%27%232a1640%27 stroke-width=%276%27/%3E%3Ccircle cx=%2737%27 cy=%2747%27 r=%275%27 fill=%27%232a1640%27/%3E%3Ccircle cx=%2763%27 cy=%2747%27 r=%275%27 fill=%27%232a1640%27/%3E%3C/svg%3E">
+<title>Squeeze Advent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Fredoka:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a groovy grape "box lid" header, a 24-door wall of mixed shapes, and a squish stage that opens over it. Single dark look by design. */
+:root{
+  --grape:#2a1640; --grape2:#3a1f58; --cream:#fff3e6; --mute:#c9b6e4; --hot:#ff4f9a; --lime:#b6f04a; --sky:#53d2ff; --sun:#ffc93c; --tang:#ff8a3d;
+  --display:"Bagel Fat One","Arial Rounded MT Bold",sans-serif; --body:"Fredoka",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:#2a1640}
+body{margin:0;background:var(--grape);color:var(--cream);font:16px/1.5 var(--body);min-height:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px;
+  background-image:radial-gradient(circle at 15% 10%,rgba(255,79,154,.18),transparent 40%),radial-gradient(circle at 90% 30%,rgba(83,210,255,.14),transparent 40%)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--lime);outline-offset:3px}
+.wrap{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
+
+/* wavy rainbow band */
+.waves{height:54px;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));display:block;width:calc(100% + 2*max(16px,env(safe-area-inset-left,0px)))}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;padding-top:6px}
+.kick{font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--lime);font-size:13px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(48px,10vw,96px);line-height:.9;margin:4px 0 8px;text-wrap:balance}
+h1 .l{display:inline-block;transform:rotate(var(--r,0deg))}
+.lede{margin:0;color:var(--mute);max-width:46ch}
+.stat{display:flex;gap:10px}
+.stat div{background:var(--grape2);border:2px solid rgba(255,243,230,.18);border-radius:18px;padding:10px 16px;text-align:center;min-width:92px}
+.stat b{display:block;font:400 34px/1 var(--display);color:var(--sun);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.note{color:var(--mute);font-size:14px;margin:0}
+.toggle{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;font-size:14px;color:var(--mute)}
+.toggle input{appearance:none;-webkit-appearance:none;width:44px;height:26px;border-radius:999px;background:var(--grape2);border:2px solid var(--mute);position:relative;margin:0;cursor:pointer}
+.toggle input::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--mute);transition:left .2s}
+.toggle input:checked{background:var(--hot);border-color:var(--hot)}
+.toggle input:checked::after{left:20px;background:var(--cream)}
+
+/* door wall */
+.wall{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;padding:18px;border-radius:28px;background:var(--grape2);
+  border:3px solid var(--cream);box-shadow:8px 8px 0 var(--hot)}
+.door{position:relative;aspect-ratio:1;max-width:100%;border:3px solid var(--grape);cursor:pointer;display:grid;place-items:center;
+  font:400 clamp(22px,4vw,34px)/1 var(--display);color:var(--grape);background:var(--c);transition:transform .18s}
+.door.s0{border-radius:50%}.door.s1{border-radius:22px}.door.s2{border-radius:50% 50% 18px 18px}.door.s3{border-radius:18px 50% 18px 50%}
+.door:not(.lock):hover{transform:scale(1.06) rotate(-3deg)}
+.door.lock{cursor:not-allowed;filter:saturate(.35) brightness(.7)}
+.door.lock::after{content:"";position:absolute;right:10%;bottom:10%;width:18%;aspect-ratio:1;border-radius:50%;background:var(--grape);opacity:.5}
+.door.open{background:var(--grape);border-color:var(--c);color:var(--c)}
+.door canvas{width:76%;height:76%}
+.door .num{position:absolute;top:6%;left:9%;font-size:clamp(11px,1.6vw,14px);font-family:var(--body);font-weight:700}
+.door.today{animation:bob 1.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-5px)}}
+
+/* stage */
+dialog{border:0;padding:0;background:transparent;color:var(--cream);max-width:min(560px,calc(100vw - 32px));width:100%}
+dialog::backdrop{background:rgba(20,8,32,.82)}
+.stage{background:var(--grape2);border:3px solid var(--cream);border-radius:28px;padding:20px;display:grid;gap:12px;text-align:center;box-shadow:8px 8px 0 var(--sky)}
+.stage header{justify-content:space-between;align-items:center;padding:0}
+.stage h2{font:400 clamp(28px,6vw,40px)/1 var(--display);margin:0;color:var(--c)}
+.day{font-weight:600;letter-spacing:.16em;text-transform:uppercase;font-size:13px;color:var(--mute)}
+.close{border:2px solid var(--mute);background:transparent;border-radius:999px;width:40px;height:40px;font-size:22px;line-height:1;cursor:pointer;flex:none}
+#toy{width:100%;aspect-ratio:1;max-width:380px;margin:0 auto;display:block;touch-action:none;cursor:grab}
+#toy:active{cursor:grabbing}
+.challenge{background:var(--grape);border-radius:18px;padding:12px 14px;display:grid;gap:8px}
+.challenge p{margin:0;font-weight:500}
+.prog{height:12px;border-radius:999px;background:rgba(255,243,230,.12);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--c);border-radius:inherit;transition:width .2s}
+.tip{color:var(--mute);font-size:14px;margin:0}
+.done{font:400 22px var(--display);color:var(--lime)}
+.row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.btn{border:2px solid var(--cream);background:transparent;border-radius:999px;padding:8px 16px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--cream);color:var(--grape)}
+
+footer{color:var(--mute);font-size:13px;text-align:center}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
+@media(max-width:720px){.wall{grid-template-columns:repeat(4,1fr);gap:10px;padding:12px}}
+@media(max-width:420px){.stat div{min-width:0;flex:1}}
+@media(prefers-reduced-motion:reduce){.door,.door.today{animation:none;transition:none}}
+</style>
+</head>
+<body>
+
+<svg class="waves" viewBox="0 0 1200 54" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M0 8 Q150 -6 300 8 T600 8 T900 8 T1200 8 V18 Q1050 32 900 18 T600 18 T300 18 T0 18Z" fill="#ff4f9a"/>
+  <path d="M0 20 Q150 6 300 20 T600 20 T900 20 T1200 20 V30 Q1050 44 900 30 T600 30 T300 30 T0 30Z" fill="#ffc93c"/>
+  <path d="M0 32 Q150 18 300 32 T600 32 T900 32 T1200 32 V42 Q1050 56 900 42 T600 42 T300 42 T0 42Z" fill="#b6f04a"/>
+</svg>
+
+<main class="wrap">
+  <header>
+    <div>
+      <div class="kick">24 days of digital squishies</div>
+      <h1 id="title">Squeeze Advent</h1>
+      <p class="lede">Open one door a day in December. Behind each one is a squishy toy you can poke, squeeze and stretch on your screen, plus a daily squeeze challenge.</p>
+    </div>
+    <div class="stat"><div><b id="opened">0</b><span>Opened</span></div><div><b id="left">24</b><span>Days to go</span></div><div><b id="squeezes">0</b><span>Squeezes</span></div></div>
+  </header>
+
+  <div class="bar">
+    <p class="note" id="note"></p>
+    <label class="toggle" for="peek"><input type="checkbox" id="peek"> Preview mode: unlock all doors</label>
+  </div>
+
+  <div class="wall" id="wall" role="list"></div>
+
+  <footer>Works on phone, tablet and computer. Your opened doors and squeeze counts save in this browser.</footer>
+</main>
+
+<dialog id="dlg" aria-labelledby="tname">
+  <div class="stage" id="stage">
+    <header><div style="text-align:left"><div class="day" id="tday"></div><h2 id="tname"></h2></div><button class="close" id="close" type="button" aria-label="Close">×</button></header>
+    <canvas id="toy" width="760" height="760" aria-label="Squishy toy. Press, hold and drag to squeeze it."></canvas>
+    <div class="challenge">
+      <p id="tchal"></p>
+      <div class="prog"><i id="tprog"></i></div>
+      <p class="tip" id="tcount"></p>
+    </div>
+    <div class="row"><button class="btn" id="prev" type="button">‹ Previous</button><button class="btn" id="sound" type="button" aria-pressed="true">Sound on</button><button class="btn" id="next" type="button">Next ›</button></div>
+  </div>
+</dialog>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+(function(){
+const KEY="squeezeAdvent.v1";
+let S={opened:[],counts:{},done:[],peek:false,sound:true};
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.opened)S=Object.assign(S,s)}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+
+/* 24 original toys: shape = radius function, colors, texture, challenge */
+const SH={
+ ball:t=>1, star:t=>1+.22*Math.cos(5*t), flower:t=>1+.13*Math.cos(6*t), bean:t=>1+.22*Math.cos(2*t),
+ cloud:t=>1+.07*Math.abs(Math.cos(4*t))*2-.05, tri:t=>1+.16*Math.cos(3*t), heart:t=>{const s=Math.sin(t);return Math.max(.3,(2+2*s-s*Math.sqrt(Math.abs(Math.cos(t)))/(1.4-s))/2.7)},
+ gum:t=>1+.1*Math.cos(t-Math.PI/2)+.05*Math.cos(4*t), egg:t=>1+.12*Math.sin(t)
+};
+const T=[
+ ["Cherry Bop","ball","#ff4f9a","dots",20],["Lemon Squeezy","bean","#ffc93c","none",25],["Minty Puff","cloud","#7ef0c8","none",15],["Starla","star","#ffd84d","glitter",30],
+ ["Blueberry Blob","ball","#53d2ff","speckle",25],["Pine Squish","tri","#4fdc7a","dots",20],["Gumdrop Gus","gum","#ff6b6b","sugar",30],["Snowy Sam","cloud","#f2f6ff","glitter",20],
+ ["Peachy Keen","ball","#ffa76b","none",35],["Grape Jelly","bean","#b07cff","speckle",25],["Daisy Doo","flower","#fff27a","none",30],["Cocoa Mallow","ball","#c98a5a","sugar",25],
+ ["Sweetheart","heart","#ff7aa8","glitter",40],["Kiwi Kid","egg","#a6e34a","speckle",25],["Lava Lump","bean","#ff6a3d","dots",35],["Frosty Star","star","#9be7ff","glitter",30],
+ ["Bubblegum","ball","#ff9ed8","none",45],["Tangerine Tom","flower","#ff9a2e","dots",30],["Moon Pie","egg","#e8e0ff","speckle",30],["Holly Jolly","tri","#36c46a","sugar",35],
+ ["Sprinkle Sue","ball","#ffb3e6","sprinkles",40],["Cloud Nine","cloud","#cfe8ff","none",40],["Jingle Jelly","gum","#ffe14d","glitter",45],["Big Squeeze","star","#ff4f9a","sprinkles",50]
+].map(([name,shape,color,tex,goal],i)=>({n:i+1,name,shape,color,tex,goal}));
+const CHAL=["Give it {g} quick squeezes.","Squeeze it {g} times to warm up your hands.","Take a deep breath, then squeeze {g} times.","Squeeze {g} times while you count out loud.",
+ "Stretch it by dragging outward, {g} squeezes total.","Squeeze {g} times with your other hand."];
+
+const now=new Date(),isDec=now.getMonth()===11,today=now.getDate();
+const unlocked=n=>S.peek||(isDec&&n<=today);
+
+/* tilted title letters */
+let li=0;$("title").innerHTML="Squeeze Advent".split(" ").map(w=>`<span style="white-space:nowrap">${[...w].map(c=>`<span class="l" style="--r:${(li++%2?1:-1)*(2+(li*7)%5)}deg">${c}</span>`).join("")}</span>`).join(" ");
+
+/* mini static toy drawn inside opened doors */
+function drawMini(cv,toy){const s=cv.width=cv.height=120,x=cv.getContext("2d"),R=44,f=SH[toy.shape];
+ x.beginPath();for(let k=0;k<=64;k++){const t=k/64*Math.PI*2,r=R*f(t);x[k?"lineTo":"moveTo"](60+r*Math.cos(t),62+r*Math.sin(t))}x.closePath();
+ x.fillStyle=toy.color;x.fill();x.fillStyle="#2a1640";x.beginPath();x.arc(48,58,4.5,0,7);x.arc(72,58,4.5,0,7);x.fill();
+ x.strokeStyle="#2a1640";x.lineWidth=3;x.lineCap="round";x.beginPath();x.arc(60,66,8,.2*Math.PI,.8*Math.PI);x.stroke()}
+
+const DC=["#ff4f9a","#ffc93c","#b6f04a","#53d2ff","#ff8a3d","#c9a2ff"];
+function wall(){
+ $("wall").innerHTML=T.map(t=>{const op=S.opened.includes(t.n),lk=!unlocked(t.n);
+  return `<button type="button" role="listitem" class="door s${(t.n*7)%4} ${lk?"lock":""} ${op?"open":""} ${isDec&&t.n===today&&!op?"today":""}" style="--c:${op?t.color:DC[t.n%6]}" data-n="${t.n}" aria-label="Day ${t.n}${lk?", locked":op?", "+t.name:""}">${op?`<span class="num">${t.n}</span><canvas></canvas>`:t.n}</button>`}).join("");
+ $("wall").querySelectorAll(".door.open").forEach(d=>drawMini(d.querySelector("canvas"),T[d.dataset.n-1]));
+ $("opened").textContent=S.opened.length;
+ const y=isDec&&today>25?now.getFullYear()+1:now.getFullYear(),dl=Math.max(0,Math.ceil((new Date(y,11,25)-now)/864e5));
+ $("left").textContent=dl;$("squeezes").textContent=Object.values(S.counts).reduce((a,b)=>a+b,0);
+ $("note").textContent=isDec?(today<=24?`Today is December ${today}. Door ${today} is ready.`:"All 24 doors are open. Merry Christmas!"):"Doors unlock one a day starting December 1. Turn on preview mode to try them now.";
+ $("peek").checked=S.peek;
+}
+$("peek").addEventListener("change",e=>{S.peek=e.target.checked;save();wall()});
+$("wall").addEventListener("click",e=>{const d=e.target.closest(".door");if(!d||d.classList.contains("lock"))return;open(+d.dataset.n)});
+
+/* squish physics */
+const cv=$("toy"),cx=cv.getContext("2d"),N=72,CW=760,C=380,R0=230;
+let toy=null,pts=[],ptr=null,press=0,raf=0,squishT=0;
+function setup(t){toy=t;pts=[];for(let i=0;i<N;i++){const a=i/N*Math.PI*2;pts.push({a,r:R0*SH[t.shape](a),d:0,v:0})}
+ const rnd=mul(t.n*99);toy.marks=Array.from({length:70},()=>({a:rnd()*Math.PI*2,q:Math.sqrt(rnd())*.85,s:rnd(),c:Math.floor(rnd()*6)}))}
+function mul(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function pos(e){const b=cv.getBoundingClientRect();return{x:(e.clientX-b.left)/b.width*CW-C,y:(e.clientY-b.top)/b.height*CW-C}}
+cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);ptr=pos(e);press=0;count();boop(1)});
+cv.addEventListener("pointermove",e=>{if(ptr)ptr=pos(e)});
+const up=()=>{if(ptr){ptr=null;boop(.6)}};cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+cv.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();ptr={x:0,y:-40};count();boop(1);setTimeout(up,220)}});cv.tabIndex=0;
+
+function step(){
+ press=ptr?Math.min(1,press+.08):Math.max(0,press-.1);
+ const pa=ptr?Math.atan2(ptr.y,ptr.x):0,pd=ptr?Math.hypot(ptr.x,ptr.y):0;
+ for(let i=0;i<N;i++){const p=pts[i];let f=-.06*p.d-.12*p.v;
+  const l=pts[(i+N-1)%N].d,r=pts[(i+1)%N].d;f+=.18*((l+r)/2-p.d);
+  if(ptr){let da=Math.abs(((p.a-pa+Math.PI*3)%(Math.PI*2))-Math.PI);const w=Math.exp(-da*da/.5);
+   let tgt=pd>p.r?Math.min(.5*p.r,pd-p.r+20):-Math.max(0,(p.r-pd))*.55-20;
+   if(pd<p.r*.45)tgt=-.22*p.r*(1-Math.abs(Math.cos(p.a-pa))*.3);
+   f+=.12*w*press*(tgt-p.d);
+   if(pd<p.r*.45)f+=.05*press*(.12*p.r*Math.abs(Math.sin(p.a-pa))-p.d)*(1-w)}
+  p.v+=f;}
+ for(const p of pts){p.d+=p.v}
+ draw();raf=requestAnimationFrame(step)}
+
+function shade(h,a){const n=parseInt(h.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;const m=a<0?0:255,k=Math.abs(a);
+ r=Math.round(r+(m-r)*k);g=Math.round(g+(m-g)*k);b=Math.round(b+(m-b)*k);return`rgb(${r},${g},${b})`}
+function draw(){
+ cx.clearRect(0,0,CW,CW);
+ const P=pts.map(p=>{const r=p.r+p.d;return[C+r*Math.cos(p.a),C+15+r*Math.sin(p.a)]});
+ // shadow
+ cx.fillStyle="rgba(0,0,0,.25)";cx.beginPath();cx.ellipse(C,C+R0+48,R0*(.8+press*.15),26,0,0,7);cx.fill();
+ const path=()=>{cx.beginPath();for(let i=0;i<=N;i++){const a=P[i%N],b=P[(i+1)%N],m=[(a[0]+b[0])/2,(a[1]+b[1])/2];i?cx.quadraticCurveTo(a[0],a[1],m[0],m[1]):cx.moveTo(m[0],m[1])}cx.closePath()};
+ path();const g=cx.createRadialGradient(C-80,C-90,20,C,C,R0*1.3);g.addColorStop(0,shade(toy.color,.45));g.addColorStop(.55,toy.color);g.addColorStop(1,shade(toy.color,-.25));
+ cx.fillStyle=g;cx.fill();cx.lineWidth=8;cx.strokeStyle="#2a1640";cx.stroke();
+ cx.save();path();cx.clip();
+ const MC=["#ffffff","#ff4f9a","#53d2ff","#ffc93c","#b6f04a","#c9a2ff"];
+ for(const m of toy.marks){const i=Math.floor(m.a/(Math.PI*2)*N)%N,p=pts[i],r=(p.r+p.d)*m.q,x=C+r*Math.cos(m.a),y=C+15+r*Math.sin(m.a);
+  if(toy.tex==="dots"){cx.fillStyle="rgba(255,255,255,.35)";cx.beginPath();cx.arc(x,y,6+m.s*8,0,7);cx.fill()}
+  else if(toy.tex==="speckle"){cx.fillStyle="rgba(42,22,64,.28)";cx.beginPath();cx.arc(x,y,2+m.s*3,0,7);cx.fill()}
+  else if(toy.tex==="glitter"){cx.fillStyle=`rgba(255,255,255,${.4+m.s*.5})`;cx.save();cx.translate(x,y);cx.rotate(m.s*3);cx.fillRect(-3,-3,6,6);cx.restore()}
+  else if(toy.tex==="sugar"){cx.fillStyle="rgba(255,255,255,.55)";cx.fillRect(x,y,4,4)}
+  else if(toy.tex==="sprinkles"){cx.strokeStyle=MC[m.c];cx.lineWidth=6;cx.lineCap="round";cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+10*Math.cos(m.s*6),y+10*Math.sin(m.s*6));cx.stroke()}}
+ // gloss
+ cx.fillStyle="rgba(255,255,255,.35)";cx.beginPath();cx.ellipse(C-90,C-100,48,26,-.6,0,7);cx.fill();
+ cx.restore();
+ // face follows the body
+ const ox=pts.reduce((s,p)=>s+(p.d)*Math.cos(p.a),0)/N*1.6,oy=pts.reduce((s,p)=>s+(p.d)*Math.sin(p.a),0)/N*1.6;
+ const fx=C+ox,fy=C+15+oy;cx.fillStyle="#2a1640";cx.strokeStyle="#2a1640";cx.lineCap="round";cx.lineWidth=10;
+ if(press>.3){cx.beginPath();cx.moveTo(fx-62,fy-22);cx.lineTo(fx-34,fy-10);cx.lineTo(fx-62,fy+2);cx.moveTo(fx+62,fy-22);cx.lineTo(fx+34,fy-10);cx.lineTo(fx+62,fy+2);cx.stroke();
+  cx.beginPath();cx.ellipse(fx,fy+40,22,18+press*8,0,0,7);cx.fill()}
+ else{cx.beginPath();cx.arc(fx-46,fy-12,14,0,7);cx.arc(fx+46,fy-12,14,0,7);cx.fill();cx.fillStyle="#fff";cx.beginPath();cx.arc(fx-41,fy-17,5,0,7);cx.arc(fx+51,fy-17,5,0,7);cx.fill();
+  cx.beginPath();cx.arc(fx,fy+18,26,.15*Math.PI,.85*Math.PI);cx.stroke()}
+ cx.fillStyle="rgba(255,79,154,.45)";cx.beginPath();cx.ellipse(fx-82,fy+18,18,10,0,0,7);cx.ellipse(fx+82,fy+18,18,10,0,0,7);cx.fill();
+}
+
+/* sound */
+/* a bank of 12 synth sounds; every press picks a different one than last time, with a random pitch */
+const env=(a,t,peak,att,dur,out)=>{const g=a.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+att);g.gain.exponentialRampToValueAtTime(.0001,t+dur);g.connect(out);return g};
+const osc=(a,type,f,t,dur,g)=>{const o=a.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t);o.connect(g);o.start(t);o.stop(t+dur+.05);return o};
+const noise=(a,t,dur,g,ft,f,q)=>{const n=Math.floor(a.sampleRate*dur),b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+ const s=a.createBufferSource();s.buffer=b;const fl=a.createBiquadFilter();fl.type=ft;fl.frequency.setValueAtTime(f,t);fl.Q.value=q||1;s.connect(fl).connect(g);s.start(t);return fl};
+const SOUNDS=[
+ (a,t,o,p)=>{const g=env(a,t,.3,.01,.25,o);osc(a,"sine",p*1.2,t,.25,g).frequency.exponentialRampToValueAtTime(p*.5,t+.2)},                       // boop
+ (a,t,o,p)=>{const g=env(a,t,.16,.01,.16,o);osc(a,"triangle",p*3,t,.16,g).frequency.exponentialRampToValueAtTime(p*6,t+.12)},                    // squeak
+ (a,t,o,p)=>{const g=env(a,t,.5,.002,.08,o);noise(a,t,.08,g,"bandpass",p*4,2);const g2=env(a,t,.25,.002,.06,o);osc(a,"sine",p*2,t,.06,g2)},        // pop
+ (a,t,o,p)=>{const g=env(a,t,.28,.02,.4,o),x=osc(a,"sine",p,t,.4,g),l=a.createOscillator(),lg=a.createGain();l.frequency.value=18;lg.gain.value=p*.25;l.connect(lg).connect(x.frequency);l.start(t);l.stop(t+.45)}, // bloop
+ (a,t,o,p)=>{const g=env(a,t,.3,.01,.5,o),x=osc(a,"sine",p*1.5,t,.5,g);for(let i=0;i<8;i++)x.frequency.setValueAtTime(p*(i%2?1.1:1.9)*(1-i*.06),t+i*.05)}, // boing
+ (a,t,o,p)=>{const g=env(a,t,.18,.005,.09,o);osc(a,"square",p*2.5,t,.09,g);const g2=env(a,t+.09,.18,.005,.1,o);osc(a,"square",p*3.3,t+.09,.1,g2)},  // chirp
+ (a,t,o,p)=>{const g=env(a,t,.5,.03,.35,o);noise(a,t,.35,g,"lowpass",p*6,6).frequency.exponentialRampToValueAtTime(p*.8,t+.3)},                   // squish
+ (a,t,o,p)=>{const g=env(a,t,.3,.005,.18,o);osc(a,"sine",p*.8,t,.18,g).frequency.exponentialRampToValueAtTime(p*3.2,t+.15)},                     // bubble
+ (a,t,o,p)=>{const g=env(a,t,.14,.01,.22,o),f=a.createBiquadFilter();f.type="lowpass";f.frequency.value=p*4;f.connect(g);osc(a,"sawtooth",p*.9,t,.22,f)}, // honk
+ (a,t,o,p)=>{[1,2.76,5.4].forEach((m,i)=>{const g=env(a,t,.16/(i+1),.003,.7,o);osc(a,"sine",p*3*m,t,.7,g)})},                                   // ding
+ (a,t,o,p)=>{const g=env(a,t,.25,.01,.3,o);const x=osc(a,"triangle",p*.6,t,.3,g);x.frequency.exponentialRampToValueAtTime(p*.3,t+.28)},           // plop
+ (a,t,o,p)=>{[0,.06,.12].forEach((d,i)=>{const g=env(a,t+d,.14,.004,.08,o);osc(a,"sine",p*(2+i*.5),t+d,.08,g)})}                                  // giggle
+];
+window.__squeezeSounds=SOUNDS;
+let ac=null,lastS=-1;
+function boop(k){if(!S.sound)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==="suspended")ac.resume();const t=ac.currentTime+.005;
+ const p=(200+(toy?toy.n*9:0))*(.8+Math.random()*.45);
+ if(k<.8){const g=env(ac,t,.08,.005,.07,ac.destination);osc(ac,"sine",p*2.4,t,.07,g);return}
+ let i;do{i=Math.floor(Math.random()*SOUNDS.length)}while(i===lastS);lastS=i;window.__lastSound={i,p};SOUNDS[i](ac,t,ac.destination,p)}catch(e){}}
+$("sound").addEventListener("click",()=>{S.sound=!S.sound;save();sbtn()});
+const sbtn=()=>{$("sound").textContent=S.sound?"Sound on":"Sound off";$("sound").setAttribute("aria-pressed",S.sound)};sbtn();
+
+/* challenge */
+function count(){if(!toy)return;const n=toy.n;S.counts[n]=(S.counts[n]||0)+1;save();prog();
+ if(S.counts[n]===toy.goal&&!S.done.includes(n)){S.done.push(n);save();confetti();prog()}}
+function prog(){const c=S.counts[toy.n]||0,p=Math.min(100,c/toy.goal*100);$("tprog").style.width=p+"%";
+ $("tcount").innerHTML=S.done.includes(toy.n)?`<span class="done">Challenge complete!</span> ${c} squeezes so far.`:`${c} of ${toy.goal} squeezes`;
+ $("squeezes").textContent=Object.values(S.counts).reduce((a,b)=>a+b,0)}
+
+/* open door */
+const dlg=$("dlg");
+function open(n){const t=T[n-1];if(!S.opened.includes(n)){S.opened.push(n);save()}
+ setup(t);$("stage").style.setProperty("--c",t.color);$("tday").textContent=`December ${n}`;$("tname").textContent=t.name;
+ $("tchal").textContent=CHAL[n%CHAL.length].replace("{g}",t.goal);prog();
+ $("prev").disabled=!(n>1&&unlocked(n-1));$("next").disabled=!(n<24&&unlocked(n+1));
+ if(!dlg.open)dlg.showModal();cancelAnimationFrame(raf);step();wall()}
+$("close").addEventListener("click",()=>dlg.close());
+dlg.addEventListener("close",()=>cancelAnimationFrame(raf));
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
+$("prev").addEventListener("click",()=>open(toy.n-1));$("next").addEventListener("click",()=>open(toy.n+1));
+
+/* confetti */
+function confetti(){if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;const c=$("confetti"),x=c.getContext("2d");(dlg.open?dlg:document.body).appendChild(c);c.width=innerWidth;c.height=innerHeight;
+ const P=Array.from({length:140},()=>({x:innerWidth/2,y:innerHeight/2,vx:(Math.random()-.5)*16,vy:Math.random()*-16-4,c:DC[Math.floor(Math.random()*6)],s:6+Math.random()*6,r:Math.random()*6}));
+ let f=0;(function l(){x.clearRect(0,0,c.width,c.height);for(const p of P){p.vy+=.45;p.x+=p.vx;p.y+=p.vy;p.r+=.2;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);x.restore()}
+ if(++f<120)requestAnimationFrame(l);else x.clearRect(0,0,c.width,c.height)})()}
+
+wall();
+})();
+</script>
+
+</body>
+</html>
